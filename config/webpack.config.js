@@ -26,7 +26,7 @@ const config = getConfig();
 const getHTMLPlugins = (dev) => {
   const files = getFilesFromDir(srcPath, ['.html']);
   const plugins = files.map((file) => {
-    const fileName = file.replace(srcPath, '');
+    const fileName = path.basename(file);
     const data = {
       chunks: [fileName.replace(path.extname(fileName), ''), 'vendor'],
       template: file,
@@ -60,7 +60,7 @@ const getEntires = () => {
   const entryNames = {};
   const files = getFilesFromDir(srcPath, ['.html']);
   files.forEach((file) => {
-    const chunkName = file.replace(srcPath, '').replace(path.extname(file), '');
+    const chunkName = path.basename(file).replace(path.extname(file), '');
     entryNames[chunkName] = resolve(['src', 'scripts', `${chunkName}.js`]);
   });
   return entryNames;
@@ -103,7 +103,7 @@ const getJSLoaders = (dev) => {
 const getStyleLoaders = (dev) => {
   const productionLoader = {
     loader: MiniCssExtractPlugin.loader,
-    options: { publicPath: buildPath }
+    options: config.publicUrl.startsWith('.') ? { publicPath: buildPath } : {}
   };
 
   const sassLoader = {
@@ -246,7 +246,7 @@ module.exports = (env, options) => {
     bail: !isDevMode,
     entry: getEntires(),
     output: {
-      path: buildPath,
+      path: !isDevMode ? buildPath : undefined,
       pathinfo: isDevMode,
       filename: isDevMode
         ? 'static/js/[name].[fullhash:8].js'
