@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs-extra');
 
 const { HotModuleReplacementPlugin, IgnorePlugin } = require('webpack'); // HMR
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer'); // Analyzes Build
@@ -24,7 +25,8 @@ const { buildPath, srcPath } = getPaths();
 const config = getConfig();
 
 const getHTMLPlugins = (dev) => {
-  const files = getFilesFromDir(srcPath, ['.html']);
+  const ext = config.enableHBS ? '.hbs' : '.html';
+  const files = getFilesFromDir(srcPath, [ext]);
   const plugins = files.map((file) => {
     const fileName = path.basename(file);
     const data = {
@@ -57,8 +59,9 @@ const getHTMLPlugins = (dev) => {
 };
 
 const getEntires = () => {
+  const ext = config.enableHBS ? '.hbs' : '.html';
   const entryNames = {};
-  const files = getFilesFromDir(srcPath, ['.html']);
+  const files = getFilesFromDir(srcPath, [ext]);
   files.forEach((file) => {
     const chunkName = path.basename(file).replace(path.extname(file), '');
     entryNames[chunkName] = resolve(['src', 'scripts', `${chunkName}.js`]);
@@ -67,13 +70,34 @@ const getEntires = () => {
 };
 
 const getHTMLLoader = () => {
-  return {
+  let action = {
     test: /\.html$/i,
     loader: 'html-loader',
     options: {
       esModule: true
     }
   };
+
+  if (config.enableHTMLPartials) {
+    action.options.preprocessor = (content, loaderContext) =>
+      content.replace(
+        /<include src="(.+)"\s*\/?>(?:<\/include>)?/gi,
+        (m, src) => {
+          const filePath = path.resolve(loaderContext.context, src);
+          loaderContext.dependency(filePath);
+          return fs.readFileSync(filePath, 'utf8');
+        }
+      );
+  }
+
+  if (config.enableHBS) {
+    action = {
+      test: /\.hbs$/i,
+      loader: 'handlebars-loader'
+    };
+  }
+
+  return action;
 };
 
 const getJSLoaders = (dev) => {
@@ -171,10 +195,10 @@ const getStyleLoaders = (dev) => {
   }
 };
 
-const getImageLoaders = () => {
+const getImageLoaders = (dev) => {
   const loaders = [
     {
-      test: /\.bmp$/,
+      test: [/\.bmp$/, /\.webp$/],
       use: [
         {
           loader: 'url-loader',
@@ -186,7 +210,7 @@ const getImageLoaders = () => {
       ]
     },
     {
-      test: [/\.gif$/, /\.jpe?g$/, /\.png$/, /\.webp$/, /\.svg$/],
+      test: [/\.gif$/, /\.jpe?g$/, /\.png$/, /\.svg$/],
       use: [
         {
           loader: 'url-loader',
@@ -194,19 +218,16 @@ const getImageLoaders = () => {
             limit: config.imageInlineLimit,
             name: 'static/media/[name].[hash:8].[ext]'
           }
-        },
-        {
-          loader: 'image-webpack-loader',
-          options: {
-            disable: true,
-            webp: {
-              quality: 75
-            }
-          }
         }
       ]
     }
   ];
+
+  if (!dev) {
+    loaders[1].use.push({
+      loader: 'image-webpack-loader'
+    });
+  }
 
   return loaders;
 };
@@ -346,7 +367,7 @@ module.exports = (env, options) => {
             getHTMLLoader(),
             getJSLoaders(isDevMode),
             getStyleLoaders(isDevMode),
-            ...getImageLoaders(),
+            ...getImageLoaders(isDevMode),
             ...getFileLoaders()
           ]
         }
