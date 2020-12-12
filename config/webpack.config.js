@@ -15,6 +15,7 @@ const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin'); /
 const Dotenv = require('dotenv-webpack'); // Enables environment Variable Injection
 const { GenerateSW } = require('workbox-webpack-plugin'); // Service Worker
 const ESLintPlugin = require('eslint-webpack-plugin'); // JS Linting
+const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin'); // Type Checking
 const StylelintPlugin = require('stylelint-webpack-plugin'); // Style Linting
 const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin'); // Output
 
@@ -60,11 +61,16 @@ const getHTMLPlugins = (dev) => {
 
 const getEntires = () => {
   const ext = config.enableHBS ? '.hbs' : '.html';
+  const fileExt = config.enableTypescript ? 'ts' : 'js';
   const entryNames = {};
   const files = getFilesFromDir(srcPath, [ext]);
   files.forEach((file) => {
     const chunkName = path.basename(file).replace(path.extname(file), '');
-    entryNames[chunkName] = resolve(['src', 'scripts', `${chunkName}.js`]);
+    entryNames[chunkName] = resolve([
+      'src',
+      'scripts',
+      `${chunkName}.${fileExt}`
+    ]);
   });
   return entryNames;
 };
@@ -101,8 +107,8 @@ const getHTMLLoader = () => {
 };
 
 const getJSLoaders = (dev) => {
-  return {
-    test: /\.(js|jsx)$/,
+  const loader = {
+    test: /\.(js|mjs)$/,
     include: [srcPath],
     exclude: [resolve('node-modules')],
     loader: 'babel-loader',
@@ -122,6 +128,14 @@ const getJSLoaders = (dev) => {
       ]
     }
   };
+
+  if (config.enableTypescript) {
+    loader.test = /\.ts$/;
+
+    loader.options.presets.push('@babel/preset-typescript');
+  }
+
+  return loader;
 };
 
 const getStyleLoaders = (dev) => {
@@ -199,34 +213,36 @@ const getImageLoaders = (dev) => {
   const loaders = [
     {
       test: [/\.bmp$/, /\.webp$/],
-      use: [
-        {
-          loader: 'url-loader',
-          options: {
-            limit: config.imageInlineLimit,
-            name: 'static/media/[name].[hash:8].[ext]'
-          }
+      type: 'asset',
+      parser: {
+        dataUrlCondition: {
+          maxSize: config.imageInlineLimit
         }
-      ]
+      },
+      generator: {
+        filename: 'static/media/[name].[hash:8][ext]'
+      }
     },
     {
       test: [/\.gif$/, /\.jpe?g$/, /\.png$/, /\.svg$/],
-      use: [
-        {
-          loader: 'url-loader',
-          options: {
-            limit: config.imageInlineLimit,
-            name: 'static/media/[name].[hash:8].[ext]'
-          }
+      type: 'asset',
+      parser: {
+        dataUrlCondition: {
+          maxSize: config.imageInlineLimit
         }
-      ]
+      },
+      generator: {
+        filename: 'static/media/[name].[hash:8][ext]'
+      }
     }
   ];
 
   if (!dev) {
-    loaders[1].use.push({
-      loader: 'image-webpack-loader'
-    });
+    loaders[1].use = [
+      {
+        loader: 'image-webpack-loader'
+      }
+    ];
   }
 
   return loaders;
@@ -236,18 +252,16 @@ const getFileLoaders = () => {
   const loaders = [
     {
       test: /\.(ttf|eot|woff|woff2)$/,
-      use: {
-        loader: 'file-loader',
-        options: {
-          name: 'static/fonts/[name].[hash:8].[ext]'
-        }
+      type: 'asset/resource',
+      generator: {
+        filename: 'static/fonts/[name].[hash:8][ext]'
       }
     },
     {
-      loader: 'file-loader',
-      exclude: [/\.(js|jsx)$/, /\.html$/, /\.json$/],
-      options: {
-        name: 'static/data/[name].[hash:8].[ext]'
+      type: 'asset/resource',
+      exclude: [/\.(js|mjs|ts)$/, /\.html$/, /\.json$/],
+      generator: {
+        filename: 'static/data/[name].[hash:8][ext]'
       }
     }
   ];
@@ -270,10 +284,10 @@ module.exports = (env, options) => {
       path: !isDevMode ? buildPath : undefined,
       pathinfo: isDevMode,
       filename: isDevMode
-        ? 'static/js/[name].[fullhash:8].js'
+        ? 'static/js/[name].bundle.js'
         : 'static/js/[name].[contenthash:8].js',
       chunkFilename: isDevMode
-        ? 'static/js/[name].[fullhash:8].chunk.js'
+        ? 'static/js/[name].chunk.js'
         : 'static/js/[name].[contenthash:8].chunk.js',
       publicPath: BASE_PATH,
       globalObject: 'this',
@@ -379,7 +393,6 @@ module.exports = (env, options) => {
       isDevMode &&
         config.generateReport &&
         new BundleAnalyzerPlugin({
-          // analyzes our bundle
           analyzerMode: 'static',
           openAnalyzer: false
         }),
@@ -394,22 +407,25 @@ module.exports = (env, options) => {
       !isDevMode &&
         config.enablePWA &&
         new GenerateSW({
-          // Service Workers
           exclude: [/\.map$/, /manifest\.json$/, /LICENSE/],
           mode: 'production',
           clientsClaim: true,
           skipWaiting: true
         }),
-      new IgnorePlugin(/^\.\/locale$/, /moment$/), // These contin large locales
-      config.allowENV && new Dotenv(), // will load .env variables
+      new IgnorePlugin(/^\.\/locale$/, /moment$/),
+      config.allowENV && new Dotenv(),
+      config.enableTypescript &&
+        new ForkTsCheckerWebpackPlugin({
+          async: isDevMode
+        }),
       new ESLintPlugin({
-        extensions: ['js', 'ts'],
-        files: 'src/',
+        extensions: ['js', 'ts', 'mjs'],
+        files: srcPath,
         cache: true
-      }), // will lint our files
+      }),
       new StylelintPlugin({
         context: srcPath
-      }), // will lint our css
+      }),
       !isDevMode &&
         new CleanWebpackPlugin({
           verbose: true,
