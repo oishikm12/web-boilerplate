@@ -9,9 +9,8 @@ const HtmlWebpackInlineSVGPlugin = require('html-webpack-inline-svg-plugin'); //
 const { CleanWebpackPlugin } = require('clean-webpack-plugin'); // To reset build folder
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin'); // Path Resolution
 const MiniCssExtractPlugin = require('mini-css-extract-plugin'); // Minify CSS
-const PostcssSafeParser = require('postcss-safe-parser'); // Postcss Parser
 const TerserJSPlugin = require('terser-webpack-plugin'); // Minify JS
-const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin'); // Optimizes CSS
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin'); // Better Minimize CSS
 const Dotenv = require('dotenv-webpack'); // Enables environment Variable Injection
 const { GenerateSW } = require('workbox-webpack-plugin'); // Service Worker
 const ESLintPlugin = require('eslint-webpack-plugin'); // JS Linting
@@ -132,7 +131,12 @@ const getJSLoaders = (dev) => {
   if (config.enableTypescript) {
     loader.test = /\.ts$/;
 
-    loader.options.presets.push('@babel/preset-typescript');
+    loader.options.presets.push([
+      '@babel/preset-typescript',
+      {
+        onlyRemoveTypeImports: true
+      }
+    ]);
   }
 
   return loader;
@@ -357,17 +361,14 @@ module.exports = (env, options) => {
             }
           }
         }),
-        new OptimizeCSSAssetsPlugin({
-          cssProcessorOptions: {
-            parser: PostcssSafeParser,
-            map: config.enableSourceMap
-              ? {
-                  inline: false,
-                  annotation: true
-                }
-              : false
-          },
-          cssProcessorPluginOptions: {
+        new CssMinimizerPlugin({
+          sourceMap: config.enableSourceMap
+            ? {
+                inline: false,
+                annotation: true
+              }
+            : false,
+          minimizerOptions: {
             preset: ['default', { minifyFontValues: { removeQuotes: false } }]
           }
         })
@@ -412,11 +413,21 @@ module.exports = (env, options) => {
           clientsClaim: true,
           skipWaiting: true
         }),
-      new IgnorePlugin(/^\.\/locale$/, /moment$/),
+      new IgnorePlugin({
+        resourceRegExp: /^\.\/locale$/,
+        contextRegExp: /moment$/
+      }),
       config.allowENV && new Dotenv(),
       config.enableTypescript &&
         new ForkTsCheckerWebpackPlugin({
-          async: isDevMode
+          async: isDevMode,
+          typescript: {
+            context: srcPath,
+            diagnosticOptions: {
+              syntactic: true
+            },
+            mode: 'write-references'
+          }
         }),
       new ESLintPlugin({
         extensions: ['js', 'ts', 'mjs'],
