@@ -65,11 +65,7 @@ const getEntires = () => {
   const files = getFilesFromDir(srcPath, [ext]);
   files.forEach((file) => {
     const chunkName = path.basename(file).replace(path.extname(file), '');
-    entryNames[chunkName] = resolve([
-      'src',
-      'scripts',
-      `${chunkName}.${fileExt}`
-    ]);
+    entryNames[chunkName] = resolve(['src', 'scripts', `${chunkName}.${fileExt}`]);
   });
   return entryNames;
 };
@@ -85,14 +81,11 @@ const getHTMLLoader = () => {
 
   if (config.enableHTMLPartials) {
     action.options.preprocessor = (content, loaderContext) =>
-      content.replace(
-        /<include src="(.+)"\s*\/?>(?:<\/include>)?/gi,
-        (m, src) => {
-          const filePath = path.resolve(loaderContext.context, src);
-          loaderContext.dependency(filePath);
-          return fs.readFileSync(filePath, 'utf8');
-        }
-      );
+      content.replace(/<include src="(.+)"\s*\/?>(?:<\/include>)?/gi, (m, src) => {
+        const filePath = path.resolve(loaderContext.context, src);
+        loaderContext.dependency(filePath);
+        return fs.readFileSync(filePath, 'utf8');
+      });
   }
 
   if (config.enableHBS) {
@@ -279,27 +272,20 @@ module.exports = (env, options) => {
 
   return {
     target: 'web',
-    devtool: isDevMode
-      ? 'cheap-module-source-map'
-      : config.enableSourceMap && 'source-map',
+    devtool: isDevMode ? 'cheap-module-source-map' : config.enableSourceMap && 'source-map',
     bail: !isDevMode,
     entry: getEntires(),
     output: {
       path: !isDevMode ? buildPath : undefined,
       pathinfo: isDevMode,
-      filename: isDevMode
-        ? 'static/js/[name].bundle.js'
-        : 'static/js/[name].[contenthash:8].js',
+      filename: isDevMode ? 'static/js/[name].bundle.js' : 'static/js/[name].[contenthash:8].js',
       chunkFilename: isDevMode
         ? 'static/js/[name].chunk.js'
         : 'static/js/[name].[contenthash:8].chunk.js',
       publicPath: BASE_PATH,
       globalObject: 'this',
       devtoolModuleFilenameTemplate: !isDevMode
-        ? (info) =>
-            path
-              .relative(srcPath, info.absoluteResourcePath)
-              .replace(/\\/g, '/')
+        ? (info) => path.relative(srcPath, info.absoluteResourcePath).replace(/\\/g, '/')
         : (info) => path.resolve(info.absoluteResourcePath).replace(/\\/g, '/')
     },
     devServer: {
@@ -432,7 +418,8 @@ module.exports = (env, options) => {
       new ESLintPlugin({
         extensions: ['js', 'ts', 'mjs'],
         files: srcPath,
-        cache: true
+        cache: true,
+        cacheLocation: resolve(['node_modules', '.cache', '.eslintcache'])
       }),
       new StylelintPlugin({
         context: srcPath
