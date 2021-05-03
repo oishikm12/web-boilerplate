@@ -5,18 +5,7 @@
     "prettier/prettier": true,
     "color-no-invalid-hex": true,
     "property-no-unknown": true,
-    "at-rule-no-unknown": [
-      true,
-      {
-        "ignoreAtRules": ["use"]
-      }
-    ],
-    "order/order": [
-      "custom-properties",
-      "dollar-variables",
-      "declarations",
-      "at-rules",
-      "rules"
-    ]
+    "at-rule-no-unknown": true,
+    "order/order": ["custom-properties", "dollar-variables", "declarations", "at-rules", "rules"]
   }
 }

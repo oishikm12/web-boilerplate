@@ -6,6 +6,7 @@ const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer'); // Analyzes
 const PnpWebpackPlugin = require('pnp-webpack-plugin'); // Yarn Plug n Play
 const HtmlWebpackPlugin = require('html-webpack-plugin'); // To handle HTML
 const HtmlWebpackInlineSVGPlugin = require('html-webpack-inline-svg-plugin'); // To optimize svg
+const { WebpackManifestPlugin } = require('webpack-manifest-plugin'); // Generates manifest
 const { CleanWebpackPlugin } = require('clean-webpack-plugin'); // To reset build folder
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin'); // Path Resolution
 const MiniCssExtractPlugin = require('mini-css-extract-plugin'); // Minify CSS
@@ -36,8 +37,8 @@ const getHTMLPlugins = (dev) => {
       filename: fileName,
       meta: {
         viewport: 'width=device-width, initial-scale=1, shrink-to-fit=no',
-        'theme-color': '#fff'
-      }
+        'theme-color': '#fff',
+      },
     };
     if (!dev) {
       data.minify = {
@@ -50,7 +51,7 @@ const getHTMLPlugins = (dev) => {
         keepClosingSlash: true,
         minifyJS: true,
         minifyCSS: true,
-        minifyURLs: true
+        minifyURLs: true,
       };
     }
     return new HtmlWebpackPlugin(data);
@@ -75,8 +76,8 @@ const getHTMLLoader = () => {
     test: /\.html$/i,
     loader: 'html-loader',
     options: {
-      esModule: true
-    }
+      esModule: true,
+    },
   };
 
   if (config.enableHTMLPartials) {
@@ -91,7 +92,7 @@ const getHTMLLoader = () => {
   if (config.enableHBS) {
     action = {
       test: /\.hbs$/i,
-      loader: 'handlebars-loader'
+      loader: 'handlebars-loader',
     };
   }
 
@@ -114,11 +115,11 @@ const getJSLoaders = (dev) => {
           {
             useBuiltIns: 'usage',
             modules: false,
-            corejs: 3
-          }
-        ]
-      ]
-    }
+            corejs: 3,
+          },
+        ],
+      ],
+    },
   };
 
   if (config.enableTypescript) {
@@ -127,8 +128,8 @@ const getJSLoaders = (dev) => {
     loader.options.presets.push([
       '@babel/preset-typescript',
       {
-        onlyRemoveTypeImports: true
-      }
+        onlyRemoveTypeImports: true,
+      },
     ]);
   }
 
@@ -138,7 +139,7 @@ const getJSLoaders = (dev) => {
 const getStyleLoaders = (dev) => {
   const productionLoader = {
     loader: MiniCssExtractPlugin.loader,
-    options: config.publicUrl.startsWith('.') ? { publicPath: buildPath } : {}
+    options: config.publicUrl.startsWith('.') ? { publicPath: buildPath } : {},
   };
 
   const sassLoader = {
@@ -146,9 +147,9 @@ const getStyleLoaders = (dev) => {
     options: {
       sourceMap: true,
       sassOptions: {
-        fiber: require('fibers')
-      }
-    }
+        fiber: false,
+      },
+    },
   };
 
   const loaders = [
@@ -157,8 +158,8 @@ const getStyleLoaders = (dev) => {
       loader: 'css-loader',
       options: {
         importLoaders: 3,
-        sourceMap: !dev ? config.enableSourceMap : dev
-      }
+        sourceMap: !dev ? config.enableSourceMap : dev,
+      },
     },
     {
       loader: 'postcss-loader',
@@ -172,23 +173,23 @@ const getStyleLoaders = (dev) => {
               'postcss-preset-env',
               {
                 autoprefixer: {
-                  flexbox: 'no-2009'
+                  flexbox: 'no-2009',
                 },
-                stage: 3
-              }
+                stage: 3,
+              },
             ],
-            'postcss-normalize'
-          ]
-        }
-      }
+            'postcss-normalize',
+          ],
+        },
+      },
     },
     {
       loader: 'resolve-url-loader',
       options: {
         sourceMap: !dev ? config.enableSourceMap : dev,
-        root: srcPath
-      }
-    }
+        root: srcPath,
+      },
+    },
   ];
 
   if (!dev) loaders[0] = productionLoader;
@@ -196,12 +197,12 @@ const getStyleLoaders = (dev) => {
     loaders.push(sassLoader);
     return {
       test: /\.scss$/,
-      use: loaders
+      use: loaders,
     };
   } else {
     return {
       test: /\.css$/,
-      use: loaders
+      use: loaders,
     };
   }
 };
@@ -213,32 +214,32 @@ const getImageLoaders = (dev) => {
       type: 'asset',
       parser: {
         dataUrlCondition: {
-          maxSize: config.imageInlineLimit
-        }
+          maxSize: config.imageInlineLimit,
+        },
       },
       generator: {
-        filename: 'static/media/[name].[hash:8][ext]'
-      }
+        filename: 'static/media/[name].[hash:8][ext]',
+      },
     },
     {
       test: [/\.gif$/, /\.jpe?g$/, /\.png$/, /\.svg$/],
       type: 'asset',
       parser: {
         dataUrlCondition: {
-          maxSize: config.imageInlineLimit
-        }
+          maxSize: config.imageInlineLimit,
+        },
       },
       generator: {
-        filename: 'static/media/[name].[hash:8][ext]'
-      }
-    }
+        filename: 'static/media/[name].[hash:8][ext]',
+      },
+    },
   ];
 
   if (!dev) {
     loaders[1].use = [
       {
-        loader: 'image-webpack-loader'
-      }
+        loader: 'image-webpack-loader',
+      },
     ];
   }
 
@@ -251,16 +252,16 @@ const getFileLoaders = () => {
       test: /\.(ttf|eot|woff|woff2)$/,
       type: 'asset/resource',
       generator: {
-        filename: 'static/fonts/[name].[hash:8][ext]'
-      }
+        filename: 'static/fonts/[name].[hash:8][ext]',
+      },
     },
     {
       type: 'asset/resource',
       exclude: [/\.(js|mjs|ts)$/, /\.html$/, /\.json$/],
       generator: {
-        filename: 'static/data/[name].[hash:8][ext]'
-      }
-    }
+        filename: 'static/data/[name].[hash:8][ext]',
+      },
+    },
   ];
 
   return loaders;
@@ -286,7 +287,7 @@ module.exports = (env, options) => {
       globalObject: 'this',
       devtoolModuleFilenameTemplate: !isDevMode
         ? (info) => path.relative(srcPath, info.absoluteResourcePath).replace(/\\/g, '/')
-        : (info) => path.resolve(info.absoluteResourcePath).replace(/\\/g, '/')
+        : (info) => path.resolve(info.absoluteResourcePath).replace(/\\/g, '/'),
     },
     devServer: {
       open: true,
@@ -298,29 +299,29 @@ module.exports = (env, options) => {
       publicPath: BASE_PATH,
       overlay: {
         warnings: false,
-        errors: true
-      }
+        errors: true,
+      },
     },
     resolve: {
       alias: {
         src: srcPath,
         styles: resolve(['src', 'styles']),
         scripts: resolve(['src', 'scripts']),
-        assets: resolve(['src', 'assets'])
+        assets: resolve(['src', 'assets']),
       },
-      plugins: [PnpWebpackPlugin]
+      plugins: [PnpWebpackPlugin],
     },
     resolveLoader: {
-      plugins: [PnpWebpackPlugin.moduleLoader(module)]
+      plugins: [PnpWebpackPlugin.moduleLoader(module)],
     },
     optimization: {
       usedExports: true,
       runtimeChunk: {
-        name: (entrypoint) => `runtime-${entrypoint.name}`
+        name: (entrypoint) => `runtime-${entrypoint.name}`,
       },
       splitChunks: {
         chunks: 'all',
-        name: false
+        name: false,
       },
       minimize: !isDevMode,
       minimizer: [
@@ -329,36 +330,30 @@ module.exports = (env, options) => {
           terserOptions: {
             sourceMap: true,
             parse: {
-              ecma: 8
+              ecma: 8,
             },
             compress: {
               ecma: 5,
               warnings: false,
               comparisons: false,
-              inline: 2
+              inline: 2,
             },
             mangle: {
-              safari10: true
+              safari10: true,
             },
             output: {
               ecma: 5,
               comments: false,
-              ascii_only: true
-            }
-          }
+              ascii_only: true,
+            },
+          },
         }),
         new CssMinimizerPlugin({
-          sourceMap: config.enableSourceMap
-            ? {
-                inline: false,
-                annotation: true
-              }
-            : false,
           minimizerOptions: {
-            preset: ['default', { minifyFontValues: { removeQuotes: false } }]
-          }
-        })
-      ]
+            preset: ['default', { minifyFontValues: { removeQuotes: false } }],
+          },
+        }),
+      ],
     },
     module: {
       strictExportPresence: true,
@@ -369,10 +364,10 @@ module.exports = (env, options) => {
             getJSLoaders(isDevMode),
             getStyleLoaders(isDevMode),
             ...getImageLoaders(isDevMode),
-            ...getFileLoaders()
-          ]
-        }
-      ]
+            ...getFileLoaders(),
+          ],
+        },
+      ],
     },
     plugins: [
       ...getHTMLPlugins(isDevMode),
@@ -381,7 +376,7 @@ module.exports = (env, options) => {
         config.generateReport &&
         new BundleAnalyzerPlugin({
           analyzerMode: 'static',
-          openAnalyzer: false
+          openAnalyzer: false,
         }),
       isDevMode && new HotModuleReplacementPlugin(),
       isDevMode && new CaseSensitivePathsPlugin(),
@@ -389,7 +384,7 @@ module.exports = (env, options) => {
         new MiniCssExtractPlugin({
           // css extraction
           filename: 'static/css/[name].[contenthash:8].css',
-          chunkFilename: 'static/css/[name].[contenthash:8].[id].css'
+          chunkFilename: 'static/css/[name].[contenthash:8].[id].css',
         }),
       !isDevMode &&
         config.enablePWA &&
@@ -397,11 +392,30 @@ module.exports = (env, options) => {
           exclude: [/\.map$/, /manifest\.json$/, /LICENSE/],
           mode: 'production',
           clientsClaim: true,
-          skipWaiting: true
+          skipWaiting: true,
+        }),
+      !isDevMode &&
+        new WebpackManifestPlugin({
+          fileName: 'asset-manifest.json',
+          publicPath: config.publicUrl,
+          generate: (seed, files, entrypoints) => {
+            const manifestFiles = files.reduce((manifest, file) => {
+              manifest[file.name] = file.path;
+              return manifest;
+            }, seed);
+            const entrypointFiles = entrypoints.main?.filter(
+              (fileName) => !fileName.endsWith('.map'),
+            );
+
+            return {
+              files: manifestFiles,
+              entrypoints: entrypointFiles,
+            };
+          },
         }),
       new IgnorePlugin({
         resourceRegExp: /^\.\/locale$/,
-        contextRegExp: /moment$/
+        contextRegExp: /moment$/,
       }),
       config.allowENV && new Dotenv(),
       config.enableTypescript &&
@@ -410,31 +424,31 @@ module.exports = (env, options) => {
           typescript: {
             context: srcPath,
             diagnosticOptions: {
-              syntactic: true
+              syntactic: true,
             },
-            mode: 'write-references'
-          }
+            mode: 'write-references',
+          },
         }),
       new ESLintPlugin({
         extensions: ['js', 'ts', 'mjs'],
         files: srcPath,
         cache: true,
-        cacheLocation: resolve(['node_modules', '.cache', '.eslintcache'])
+        cacheLocation: resolve(['node_modules', '.cache', '.eslintcache']),
       }),
       new StylelintPlugin({
-        context: srcPath
+        context: srcPath,
       }),
       !isDevMode &&
         new CleanWebpackPlugin({
           verbose: true,
-          cleanOnceBeforeBuildPatterns: [buildPath]
+          cleanOnceBeforeBuildPatterns: [buildPath],
         }),
-      new FriendlyErrorsWebpackPlugin()
+      new FriendlyErrorsWebpackPlugin(),
     ].filter(Boolean),
     node: {
       global: false,
       __dirname: 'mock',
-      __filename: 'mock'
-    }
+      __filename: 'mock',
+    },
   };
 };

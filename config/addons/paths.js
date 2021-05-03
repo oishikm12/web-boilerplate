@@ -9,11 +9,11 @@ const resolve = (args) => {
 const getPaths = () => {
   return {
     buildPath: resolve(['build']),
-    srcPath: resolve(['src'])
+    srcPath: resolve(['src']),
   };
 };
 
 module.exports = {
   getPaths,
-  resolve
+  resolve,
 };

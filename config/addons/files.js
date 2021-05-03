@@ -19,13 +19,11 @@ const getFilesFromDir = (dir, fileTypes) => {
 };
 
 const getConfig = () => {
-  const buildConfig = JSON.parse(
-    fs.readFileSync(paths.resolve(['buildConfig.json']))
-  );
+  const buildConfig = JSON.parse(fs.readFileSync(paths.resolve(['buildConfig.json'])));
   return buildConfig;
 };
 
 module.exports = {
   getFilesFromDir,
-  getConfig
+  getConfig,
 };

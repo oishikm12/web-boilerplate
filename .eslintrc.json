@@ -5,7 +5,8 @@
     },
     "extends": [
         "standard",
-        "plugin:prettier/recommended"
+        "prettier",
+        "stylelint"
     ],
     "parser": "babel-eslint",
     "parserOptions": {
@@ -18,6 +19,10 @@
     "rules": {
         "no-alert": "off",
         "no-console": "off",
-        "no-unused-vars": "warn"
-    }
+        "no-unused-vars": "warn",
+        "prettier/prettier": "error",
+        "jest/no-deprecated-functions" : "off",
+        "node/no-unsupported-features/es-syntax" : "off"
+    },
+    "ignorePatterns": ["config/*", "build/*", "node_modules/*"]
 }
